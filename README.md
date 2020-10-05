@@ -6,6 +6,9 @@ Usage:
 ```
 import Timer from 'XStateTimer'
 
+const onTick = ()=>null 
+const onFinish = ()=>null
+
 const timer = new Timer(20, onTick, onFinish)
 
 timer.start()
