@@ -37,12 +37,12 @@ const timerMachineConfig: MachineConfig<
 					target: 'paused',
 				},
 				TICK: {
-					actions: 'onTick',
+					actions: 'updateElapsed',
 				},
 			},
 		},
 		[Paused]: {
-			entry: 'onPause',
+			entry: 'updateElapsed',
 			on: {
 				UNPAUSE: {
 					target: Running,
@@ -59,22 +59,20 @@ const timerMachineConfig: MachineConfig<
 	},
 	on: {
 		RESET: {
-			target: Running,
-			actions: assign(context => {
-				context.elapsed = 0;
-				context.offSet = 0;
-			}),
+			actions: 'resetTimer',
 		},
-		// 	{
-		// 		elapsed: _ => 0,
-		// 		offSet: _ => 0,
-		// 	}),
-		// },
 		'DURATION.UPDATE': {
-			actions: 'onDurationUpdate',
+			actions: 'handleDurationUpdate',
 		},
 	},
 };
+
+
+const resetTimer = assign<TimerContext, TimerEvent>(context => {
+	context.startTime = Date.now();
+	context.offSet = 0;
+	context.elapsed = 0;
+})
 
 const checkExpired = (context: TimerContext) =>
 	context.elapsed >= context.duration;
@@ -92,69 +90,37 @@ const ticker = (context: TimerContext) => (cb: (message: string) => void) => {
 	};
 };
 
-const onTick = assign<TimerContext, TimerEvent>(context => {
+const updateElapsed = assign<TimerContext, TimerEvent>(context => {
 	const elapsed = Math.min(
 		(Date.now() - context.startTime) / 1000 + context.offSet,
 		context.duration,
 	);
-	context.elapsed = +elapsed.toFixed(2);
+	context.elapsed = parseInt(elapsed.toFixed(0));
 });
-// {
-// elapsed: context => {
-// 	const elapsed = Math.min(
-// 		((Date.now() - context.startTime) / 1000) + context.offSet,
-// 		context.duration,
-// 	);
-// 	return +elapsed.toFixed(2);
-// },
-// }
-// );
 
-// const onPause = assign<TimerContext, TimerEvent>({
-// 	elapsed: context => {
-// 		const { startTime, offSet } = context;
-// 		const el = (Date.now() - startTime + offSet) / 1000;
-// 		return +el.toFixed(2);
-// 	},
-// 	offSet: context => {
-// 		return context.offSet + Date.now() - context.startTime;
-// 	},
-// });
-
-const onExpire = assign<TimerContext, TimerEvent>(context => {
+const handleExpire = assign<TimerContext, TimerEvent>(context => {
 	context.elapsed = context.duration;
-	context.offSet = 0;
 });
-
-// 	{
-// 	elapsed: context => context.duration,
-// 	offSet: _ => 0,
-// });
 
 const enterRunning = assign<TimerContext, TimerEvent>(context => {
+	context.offSet = context.elapsed
+
 	context.startTime = Date.now();
 });
-// {
-// 	startTime: _ => Date.now(),
-// });
 
-// const onDurationUpdate = assign<TimerContext, TimerEvent>({
-// 	duration: (context, event) => {
-// 		if (event.type === 'DURATION.UPDATE') {
-// 			return context.duration + event?.value;
-// 		}
-// 		return context.duration;
-// 	},
-// 	offSet: context => context.duration,
-// });
+const handleDurationUpdate = assign<TimerContext, TimerEvent>((context, event) => {
+	if (event.type === 'DURATION.UPDATE') {
+		context.duration = context.duration + (event.value || 10);
+	}
+});
 
 const timerOptions: MachineOptions<TimerContext, TimerEvent> = {
 	actions: {
-		onTick,
-		// onPause,
+		updateElapsed,
 		enterRunning,
-		onExpire,
-		// onDurationUpdate,
+		handleExpire,
+		resetTimer,
+		handleDurationUpdate,
 	},
 	guards: {
 		checkExpired,

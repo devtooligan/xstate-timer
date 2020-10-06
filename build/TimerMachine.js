@@ -32,12 +32,12 @@ var timerMachineConfig = {
                     target: 'paused',
                 },
                 TICK: {
-                    actions: 'onTick',
+                    actions: 'updateElapsed',
                 },
             },
         },
         _a[Paused] = {
-            entry: 'onPause',
+            entry: 'updateElapsed',
             on: {
                 UNPAUSE: {
                     target: Running,
@@ -54,22 +54,18 @@ var timerMachineConfig = {
         _a),
     on: {
         RESET: {
-            target: Running,
-            actions: immer_1.assign(function (context) {
-                context.elapsed = 0;
-                context.offSet = 0;
-            }),
+            actions: 'resetTimer',
         },
-        // 	{
-        // 		elapsed: _ => 0,
-        // 		offSet: _ => 0,
-        // 	}),
-        // },
         'DURATION.UPDATE': {
-            actions: 'onDurationUpdate',
+            actions: 'handleDurationUpdate',
         },
     },
 };
+var resetTimer = immer_1.assign(function (context) {
+    context.startTime = Date.now();
+    context.offSet = 0;
+    context.elapsed = 0;
+});
 var checkExpired = function (context) {
     return context.elapsed >= context.duration;
 };
@@ -84,59 +80,29 @@ var ticker = function (context) { return function (cb) {
         clearInterval(interval);
     };
 }; };
-var onTick = immer_1.assign(function (context) {
+var updateElapsed = immer_1.assign(function (context) {
     var elapsed = Math.min((Date.now() - context.startTime) / 1000 + context.offSet, context.duration);
-    context.elapsed = +elapsed.toFixed(2);
+    context.elapsed = parseInt(elapsed.toFixed(0));
 });
-// {
-// elapsed: context => {
-// 	const elapsed = Math.min(
-// 		((Date.now() - context.startTime) / 1000) + context.offSet,
-// 		context.duration,
-// 	);
-// 	return +elapsed.toFixed(2);
-// },
-// }
-// );
-// const onPause = assign<TimerContext, TimerEvent>({
-// 	elapsed: context => {
-// 		const { startTime, offSet } = context;
-// 		const el = (Date.now() - startTime + offSet) / 1000;
-// 		return +el.toFixed(2);
-// 	},
-// 	offSet: context => {
-// 		return context.offSet + Date.now() - context.startTime;
-// 	},
-// });
-var onExpire = immer_1.assign(function (context) {
+var handleExpire = immer_1.assign(function (context) {
     context.elapsed = context.duration;
-    context.offSet = 0;
 });
-// 	{
-// 	elapsed: context => context.duration,
-// 	offSet: _ => 0,
-// });
 var enterRunning = immer_1.assign(function (context) {
+    context.offSet = context.elapsed;
     context.startTime = Date.now();
 });
-// {
-// 	startTime: _ => Date.now(),
-// });
-// const onDurationUpdate = assign<TimerContext, TimerEvent>({
-// 	duration: (context, event) => {
-// 		if (event.type === 'DURATION.UPDATE') {
-// 			return context.duration + event?.value;
-// 		}
-// 		return context.duration;
-// 	},
-// 	offSet: context => context.duration,
-// });
+var handleDurationUpdate = immer_1.assign(function (context, event) {
+    if (event.type === 'DURATION.UPDATE') {
+        context.duration = context.duration + (event.value || 10);
+    }
+});
 var timerOptions = {
     actions: {
-        onTick: onTick,
-        // onPause,
+        updateElapsed: updateElapsed,
         enterRunning: enterRunning,
-        onExpire: onExpire,
+        handleExpire: handleExpire,
+        resetTimer: resetTimer,
+        handleDurationUpdate: handleDurationUpdate,
     },
     guards: {
         checkExpired: checkExpired,
