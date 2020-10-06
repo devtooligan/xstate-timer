@@ -18,6 +18,7 @@ var Running = types_1.TimerStatus.Running, Idle = types_1.TimerStatus.Idle, Paus
 var timerMachineConfig = {
     states: (_a = {},
         _a[Running] = {
+            entry: 'enterRunning',
             always: {
                 target: Idle,
                 cond: 'checkExpired',
@@ -56,7 +57,6 @@ var timerMachineConfig = {
             actions: xstate_1.assign({
                 elapsed: function (_) { return 0; },
                 offSet: function (_) { return 0; },
-                startTime: function (_) { return Date.now(); },
             }),
         },
         'DURATION.UPDATE': {
@@ -72,7 +72,6 @@ var checkDuration = function (context) {
 };
 var ticker = function (context) { return function (cb) {
     var interval = setInterval(function () {
-        console.log('actor sending tick');
         cb('TICK');
     }, 1000 * context.interval);
     return function () {
@@ -81,7 +80,7 @@ var ticker = function (context) { return function (cb) {
 }; };
 var onTick = xstate_1.assign({
     elapsed: function (context) {
-        var elapsed = Math.min((Date.now() - context.startTime + context.offSet) / 1000, context.duration);
+        var elapsed = Math.min(((Date.now() - context.startTime) / 1000) + context.offSet, context.duration);
         return +elapsed.toFixed(2);
     },
 });
@@ -99,7 +98,7 @@ var onExpire = xstate_1.assign({
     elapsed: function (context) { return context.duration; },
     offSet: function (_) { return 0; },
 });
-var onUnpause = xstate_1.assign({
+var enterRunning = xstate_1.assign({
     startTime: function (_) { return Date.now(); },
 });
 var onDurationUpdate = xstate_1.assign({
@@ -109,14 +108,15 @@ var onDurationUpdate = xstate_1.assign({
         }
         return context.duration;
     },
-    startTime: function (_) { return Date.now(); },
+    offSet: function (context) { return context.duration; },
 });
 var timerOptions = {
     actions: {
         onTick: onTick,
         onPause: onPause,
-        onUnpause: onUnpause,
+        enterRunning: enterRunning,
         onExpire: onExpire,
+        onDurationUpdate: onDurationUpdate,
     },
     guards: {
         checkExpired: checkExpired,
@@ -130,7 +130,7 @@ var timerOptions = {
 };
 exports.createTimerMachine = function (options) {
     var context = __assign(__assign({ interval: 0.1 }, options), { offSet: 0, elapsed: 0, startTime: Date.now() });
-    return xstate_1.createMachine(__assign(__assign({}, timerMachineConfig), { initial: 'running', context: context }), timerOptions);
+    return xstate_1.createMachine(__assign(__assign({}, timerMachineConfig), { initial: Running, context: context }), timerOptions);
 };
 exports.createTimerService = function (options) {
     var machine = exports.createTimerMachine(options);

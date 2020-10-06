@@ -25,8 +25,7 @@ var Timer = /** @class */ (function () {
         };
         this.kill = function () { return _this._service.stop(); };
         this._onTimerUpdate = function (state) {
-            // console.log(state);
-            console.log(state.event.type);
+            console.log(state.event.type), state;
             if (state.value === Idle) {
                 _this._onFinish();
             }
@@ -60,10 +59,3 @@ var Timer = /** @class */ (function () {
     return Timer;
 }());
 exports.Timer = Timer;
-// console.log('hello');
-// const timer = new Timer(
-// 	,
-// 	() => console.log('onTick'),
-// 	() => console.log('finished'),
-// );
-// console.log('goodbye');

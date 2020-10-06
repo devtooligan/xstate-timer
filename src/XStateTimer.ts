@@ -43,15 +43,14 @@ class Timer {
 		const event: TimerEvent = {
 			type: 'DURATION.UPDATE',
 			value,
-		}
+		};
 		this._service.send(event);
 	};
 
 	public kill = () => this._service.stop();
 
 	private _onTimerUpdate = (state: State<TimerContext, TimerEvent>) => {
-		// console.log(state);
-		console.log(state.event.type);
+		console.log(state.event.type), state;
 
 		if (state.value === Idle) {
 			this._onFinish();
@@ -68,10 +67,3 @@ class Timer {
 	};
 }
 export { Timer };
-// console.log('hello');
-// const timer = new Timer(
-// 	,
-// 	() => console.log('onTick'),
-// 	() => console.log('finished'),
-// );
-// console.log('goodbye');
