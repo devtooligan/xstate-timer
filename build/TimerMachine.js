@@ -13,6 +13,7 @@ var __assign = (this && this.__assign) || function () {
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 var xstate_1 = require("xstate");
+var immer_1 = require("@xstate/immer");
 var types_1 = require("./types");
 var Running = types_1.TimerStatus.Running, Idle = types_1.TimerStatus.Idle, Paused = types_1.TimerStatus.Paused;
 var timerMachineConfig = {
@@ -54,11 +55,16 @@ var timerMachineConfig = {
     on: {
         RESET: {
             target: Running,
-            actions: xstate_1.assign({
-                elapsed: function (_) { return 0; },
-                offSet: function (_) { return 0; },
+            actions: immer_1.assign(function (context) {
+                context.elapsed = 0;
+                context.offSet = 0;
             }),
         },
+        // 	{
+        // 		elapsed: _ => 0,
+        // 		offSet: _ => 0,
+        // 	}),
+        // },
         'DURATION.UPDATE': {
             actions: 'onDurationUpdate',
         },
@@ -78,45 +84,59 @@ var ticker = function (context) { return function (cb) {
         clearInterval(interval);
     };
 }; };
-var onTick = xstate_1.assign({
-    elapsed: function (context) {
-        var elapsed = Math.min(((Date.now() - context.startTime) / 1000) + context.offSet, context.duration);
-        return +elapsed.toFixed(2);
-    },
+var onTick = immer_1.assign(function (context) {
+    var elapsed = Math.min((Date.now() - context.startTime) / 1000 + context.offSet, context.duration);
+    context.elapsed = +elapsed.toFixed(2);
 });
-var onPause = xstate_1.assign({
-    elapsed: function (context) {
-        var startTime = context.startTime, offSet = context.offSet;
-        var el = (Date.now() - startTime + offSet) / 1000;
-        return +el.toFixed(2);
-    },
-    offSet: function (context) {
-        return context.offSet + Date.now() - context.startTime;
-    },
+// {
+// elapsed: context => {
+// 	const elapsed = Math.min(
+// 		((Date.now() - context.startTime) / 1000) + context.offSet,
+// 		context.duration,
+// 	);
+// 	return +elapsed.toFixed(2);
+// },
+// }
+// );
+// const onPause = assign<TimerContext, TimerEvent>({
+// 	elapsed: context => {
+// 		const { startTime, offSet } = context;
+// 		const el = (Date.now() - startTime + offSet) / 1000;
+// 		return +el.toFixed(2);
+// 	},
+// 	offSet: context => {
+// 		return context.offSet + Date.now() - context.startTime;
+// 	},
+// });
+var onExpire = immer_1.assign(function (context) {
+    context.elapsed = context.duration;
+    context.offSet = 0;
 });
-var onExpire = xstate_1.assign({
-    elapsed: function (context) { return context.duration; },
-    offSet: function (_) { return 0; },
+// 	{
+// 	elapsed: context => context.duration,
+// 	offSet: _ => 0,
+// });
+var enterRunning = immer_1.assign(function (context) {
+    context.startTime = Date.now();
 });
-var enterRunning = xstate_1.assign({
-    startTime: function (_) { return Date.now(); },
-});
-var onDurationUpdate = xstate_1.assign({
-    duration: function (context, event) {
-        if (event.type === 'DURATION.UPDATE') {
-            return context.duration + (event === null || event === void 0 ? void 0 : event.value);
-        }
-        return context.duration;
-    },
-    offSet: function (context) { return context.duration; },
-});
+// {
+// 	startTime: _ => Date.now(),
+// });
+// const onDurationUpdate = assign<TimerContext, TimerEvent>({
+// 	duration: (context, event) => {
+// 		if (event.type === 'DURATION.UPDATE') {
+// 			return context.duration + event?.value;
+// 		}
+// 		return context.duration;
+// 	},
+// 	offSet: context => context.duration,
+// });
 var timerOptions = {
     actions: {
         onTick: onTick,
-        onPause: onPause,
+        // onPause,
         enterRunning: enterRunning,
         onExpire: onExpire,
-        onDurationUpdate: onDurationUpdate,
     },
     guards: {
         checkExpired: checkExpired,
