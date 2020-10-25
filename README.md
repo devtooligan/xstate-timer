@@ -9,7 +9,7 @@ import Timer from 'XStateTimer'
 const onTick = ()=>null 
 const onFinish = ()=>null
 
-const timer = new Timer(20, onTick, onFinish)
+const timer = new Timer(20, onTick, onFinish)  # Sets timer for 20 seconds
 
 timer.start()
 timer.pause()
